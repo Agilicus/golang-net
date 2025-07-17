@@ -171,25 +171,19 @@ var liveProps = map[xml.Name]struct {
 // Each Propstat has a unique status and each property name will only be part
 // of one Propstat element.
 func props(ctx context.Context, fs FileSystem, ls LockSystem, name string, pnames []xml.Name) ([]Propstat, error) {
-	f, err := fs.OpenFile(ctx, name, os.O_RDONLY, 0)
+	fi, err := fs.Stat(ctx, name)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
-
-	return propsForFile(ctx, f, fs, ls, name, pnames)
+	return propsForFileInfo(ctx, fi, fs, ls, name, pnames)
 }
 
-func propsForFile(ctx context.Context, f File, fs FileSystem, ls LockSystem, name string, pnames []xml.Name) ([]Propstat, error) {
-	fi, err := f.Stat()
-	if err != nil {
-		fmt.Printf("FileProp error %v\n", err)
-		return nil, err
-	}
+func propsForFileInfo(ctx context.Context, fi os.FileInfo, fs FileSystem, ls LockSystem, name string, pnames []xml.Name) ([]Propstat, error) {
 	isDir := fi.IsDir()
 
 	var deadProps map[xml.Name]Property
-	if dph, ok := f.(DeadPropsHolder); ok {
+	if dph, ok := fi.(DeadPropsHolder); ok {
+		var err error
 		deadProps, err = dph.DeadProps()
 		if err != nil {
 			return nil, err
@@ -206,6 +200,7 @@ func propsForFile(ctx context.Context, f File, fs FileSystem, ls LockSystem, nam
 			pstatOK.Props = append(pstatOK.Props, dp)
 			continue
 		}
+
 		// Otherwise, it must either be a live property or we don't know it.
 		if prop := liveProps[pn]; prop.findFn != nil && (prop.dir || !isDir) {
 			innerXML, err := prop.findFn(ctx, fs, ls, name, fi)
@@ -234,24 +229,19 @@ func propsForFile(ctx context.Context, f File, fs FileSystem, ls LockSystem, nam
 
 // propnames returns the property names defined for resource name.
 func propnames(ctx context.Context, fs FileSystem, ls LockSystem, name string) ([]xml.Name, error) {
-	f, err := fs.OpenFile(ctx, name, os.O_RDONLY, 0)
+	fi, err := fs.Stat(ctx, name)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
-	return propnamesForFile(f)
+	return propnamesForFileInfo(fi)
 }
 
-func propnamesForFile(f File) ([]xml.Name, error) {
-	fi, err := f.Stat()
-	if err != nil {
-		return nil, err
-	}
-
+func propnamesForFileInfo(fi os.FileInfo) ([]xml.Name, error) {
 	isDir := fi.IsDir()
 
 	var deadProps map[xml.Name]Property
-	if dph, ok := f.(DeadPropsHolder); ok {
+	if dph, ok := fi.(DeadPropsHolder); ok {
+		var err error
 		deadProps, err = dph.DeadProps()
 		if err != nil {
 			return nil, err
@@ -279,17 +269,16 @@ func propnamesForFile(f File) ([]xml.Name, error) {
 //
 // See http://www.webdav.org/specs/rfc4918.html#METHOD_PROPFIND
 func allprop(ctx context.Context, fs FileSystem, ls LockSystem, name string, include []xml.Name) ([]Propstat, error) {
-	f, err := fs.OpenFile(ctx, name, os.O_RDONLY, 0)
+	fi, err := fs.Stat(ctx, name)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
-	return allpropForFile(ctx, f, fs, ls, name, include)
+	return allpropForFileInfo(ctx, fi, fs, ls, name, include)
 
 }
 
-func allpropForFile(ctx context.Context, f File, fs FileSystem, ls LockSystem, name string, include []xml.Name) ([]Propstat, error) {
-	pnames, err := propnamesForFile(f)
+func allpropForFileInfo(ctx context.Context, fi os.FileInfo, fs FileSystem, ls LockSystem, name string, include []xml.Name) ([]Propstat, error) {
+	pnames, err := propnamesForFileInfo(fi)
 	if err != nil {
 		return nil, err
 	}
@@ -303,7 +292,7 @@ func allpropForFile(ctx context.Context, f File, fs FileSystem, ls LockSystem, n
 			pnames = append(pnames, pn)
 		}
 	}
-	return propsForFile(ctx, f, fs, ls, name, pnames)
+	return propsForFileInfo(ctx, fi, fs, ls, name, pnames)
 }
 
 // patch patches the properties of resource name. The return values are
@@ -490,16 +479,18 @@ func findContentType(ctx context.Context, fs FileSystem, ls LockSystem, name str
 			return ctype, err
 		}
 	}
-	f, err := fs.OpenFile(ctx, name, os.O_RDONLY, 0)
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
+
 	// This implementation is based on serveContent's code in the standard net/http package.
 	ctype := mime.TypeByExtension(filepath.Ext(name))
 	if ctype != "" {
 		return ctype, nil
 	}
+
+	f, err := fs.OpenFile(ctx, name, os.O_RDONLY, 0)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
 	// Read a chunk to decide between utf-8 text and binary.
 	var buf [512]byte
 	n, err := io.ReadFull(f, buf[:])
