@@ -664,13 +664,10 @@ func (h *Handler) handlePropfind(w http.ResponseWriter, r *http.Request) (status
 	walkFn := func(reqPath string, info os.FileInfo, err error) error {
 		// On error from the parent call, we still have the directory-based file info.
 		// Default to it, but override with the one from the fs in the normal non-error case
-		var file File = &propstatFallback{
-			info: info,
-		}
 		if err == nil {
-			f, err := h.FileSystem.OpenFile(ctx, reqPath, os.O_RDONLY, 0)
+			newFileInfo, err := h.FileSystem.Stat(ctx, reqPath)
 			if err == nil {
-				file = f
+				info = newFileInfo
 			}
 		}
 
@@ -678,11 +675,9 @@ func (h *Handler) handlePropfind(w http.ResponseWriter, r *http.Request) (status
 		// this away.
 		err = nil
 
-		defer file.Close()
-
 		var pstats []Propstat
 		if pf.Propname != nil {
-			pnames, err := propnamesForFile(file)
+			pnames, err := propnamesForFileInfo(info)
 			if err != nil {
 				return handlePropfindError(err, info)
 			}
@@ -692,9 +687,9 @@ func (h *Handler) handlePropfind(w http.ResponseWriter, r *http.Request) (status
 			}
 			pstats = append(pstats, pstat)
 		} else if pf.Allprop != nil {
-			pstats, err = allpropForFile(ctx, file, h.FileSystem, h.LockSystem, reqPath, pf.Prop)
+			pstats, err = allpropForFileInfo(ctx, info, h.FileSystem, h.LockSystem, reqPath, pf.Prop)
 		} else {
-			pstats, err = propsForFile(ctx, file, h.FileSystem, h.LockSystem, reqPath, pf.Prop)
+			pstats, err = propsForFileInfo(ctx, info, h.FileSystem, h.LockSystem, reqPath, pf.Prop)
 		}
 		if err != nil {
 			return handlePropfindError(err, info)
