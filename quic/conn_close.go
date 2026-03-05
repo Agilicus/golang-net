@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build go1.21
-
 package quic
 
 import (
@@ -111,7 +109,7 @@ func (c *Conn) setState(now time.Time, state connState) {
 	}
 }
 
-// confirmHandshake is called when the TLS handshake completes.
+// handshakeDone is called when the TLS handshake completes.
 func (c *Conn) handshakeDone() {
 	close(c.lifetime.readyc)
 }

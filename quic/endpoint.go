@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build go1.21
-
 package quic
 
 import (
@@ -38,7 +36,6 @@ type Endpoint struct {
 }
 
 type endpointTestHooks interface {
-	timeNow() time.Time
 	newConn(c *Conn)
 }
 
@@ -162,7 +159,7 @@ func (e *Endpoint) Close(ctx context.Context) error {
 
 // Accept waits for and returns the next connection.
 func (e *Endpoint) Accept(ctx context.Context) (*Conn, error) {
-	return e.acceptQueue.get(ctx, nil)
+	return e.acceptQueue.get(ctx)
 }
 
 // Dial creates and returns a connection to a network address.
@@ -271,12 +268,7 @@ func (e *Endpoint) handleUnknownDestinationDatagram(m *datagram) {
 	if len(m.b) < minimumValidPacketSize {
 		return
 	}
-	var now time.Time
-	if e.testHooks != nil {
-		now = e.testHooks.timeNow()
-	} else {
-		now = time.Now()
-	}
+	now := time.Now()
 	// Check to see if this is a stateless reset.
 	var token statelessResetToken
 	copy(token[:], m.b[len(m.b)-len(token):])

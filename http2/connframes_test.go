@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package http2
+package http2_test
 
 import (
 	"bytes"
@@ -13,6 +13,7 @@ import (
 	"slices"
 	"testing"
 
+	. "golang.org/x/net/http2"
 	"golang.org/x/net/http2/hpack"
 )
 
@@ -108,7 +109,7 @@ frame:
 			if typ.Kind() != reflect.Func ||
 				typ.NumIn() != 1 ||
 				typ.NumOut() != 1 ||
-				typ.Out(0) != reflect.TypeOf(true) {
+				typ.Out(0) != reflect.TypeFor[bool]() {
 				tf.t.Fatalf("expected func(*SomeFrame) bool, got %T", f)
 			}
 			if typ.In(0) == reflect.TypeOf(fr) {
@@ -257,7 +258,7 @@ func (tf *testConnFramer) wantRSTStream(streamID uint32, code ErrCode) {
 	tf.t.Helper()
 	fr := readFrame[*RSTStreamFrame](tf.t, tf)
 	if fr.StreamID != streamID || fr.ErrCode != code {
-		tf.t.Fatalf("got %v, want RST_STREAM StreamID=%v, code=%v", summarizeFrame(fr), streamID, code)
+		tf.t.Fatalf("got %v, want RST_STREAM StreamID=%v, code=%v", SummarizeFrame(fr), streamID, code)
 	}
 }
 
@@ -291,7 +292,7 @@ func (tf *testConnFramer) wantGoAway(maxStreamID uint32, code ErrCode) {
 	tf.t.Helper()
 	fr := readFrame[*GoAwayFrame](tf.t, tf)
 	if fr.LastStreamID != maxStreamID || fr.ErrCode != code {
-		tf.t.Fatalf("got %v, want GOAWAY LastStreamID=%v, code=%v", summarizeFrame(fr), maxStreamID, code)
+		tf.t.Fatalf("got %v, want GOAWAY LastStreamID=%v, code=%v", SummarizeFrame(fr), maxStreamID, code)
 	}
 }
 
@@ -398,6 +399,12 @@ func (tf *testConnFramer) writeContinuation(streamID uint32, endHeaders bool, he
 
 func (tf *testConnFramer) writePriority(id uint32, p PriorityParam) {
 	if err := tf.fr.WritePriority(id, p); err != nil {
+		tf.t.Fatal(err)
+	}
+}
+
+func (tf *testConnFramer) writePriorityUpdate(id uint32, p string) {
+	if err := tf.fr.WritePriorityUpdate(id, p); err != nil {
 		tf.t.Fatal(err)
 	}
 }
