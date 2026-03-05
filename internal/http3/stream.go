@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build go1.24
-
 package http3
 
 import (
@@ -68,7 +66,7 @@ func newStream(qs *quic.Stream) *stream {
 // https://www.rfc-editor.org/rfc/rfc9114.html#section-7.1
 func (st *stream) readFrameHeader() (ftype frameType, err error) {
 	if st.lim >= 0 {
-		// We shoudn't call readFrameHeader before ending the previous frame.
+		// We shouldn't call readFrameHeader before ending the previous frame.
 		return 0, errH3FrameError
 	}
 	ftype, err = readVarint[frameType](st)

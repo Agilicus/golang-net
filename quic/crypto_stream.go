@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build go1.21
-
 package quic
 
 // "Implementations MUST support buffering at least 4096 bytes of data
@@ -144,7 +142,7 @@ func (s *cryptoStream) sendData(off int64, b []byte) {
 func (s *cryptoStream) discardKeys() error {
 	if s.in.end-s.in.start != 0 {
 		// The peer sent some unprocessed CRYPTO data that we're about to discard.
-		// Close the connetion with a TLS unexpected_message alert.
+		// Close the connection with a TLS unexpected_message alert.
 		// https://www.rfc-editor.org/rfc/rfc5246#section-7.2.2
 		const unexpectedMessage = 10
 		return localTransportError{

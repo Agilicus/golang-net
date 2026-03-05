@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build go1.24
-
 package http3
 
 import (
@@ -198,7 +196,7 @@ func TestStreamReadFrameHeaderPartial(t *testing.T) {
 		st1.stream.CloseWrite()
 
 		if _, err := st2.readFrameHeader(); err == nil {
-			t.Fatalf("%v/%v bytes of frame available: st.readFrameHeader() succeded; want error", i, len(frame))
+			t.Fatalf("%v/%v bytes of frame available: st.readFrameHeader() succeeded; want error", i, len(frame))
 		}
 	}
 }

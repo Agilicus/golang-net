@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build go1.21
-
 // Package quicwire encodes and decode QUIC/HTTP3 wire encoding types,
 // particularly variable-length integers.
 package quicwire
@@ -46,7 +44,7 @@ func ConsumeVarint(b []byte) (v uint64, n int) {
 	return 0, -1
 }
 
-// consumeVarintInt64 parses a variable-length integer as an int64.
+// ConsumeVarintInt64 parses a variable-length integer as an int64.
 func ConsumeVarintInt64(b []byte) (v int64, n int) {
 	u, n := ConsumeVarint(b)
 	// QUIC varints are 62-bits large, so this conversion can never overflow.
